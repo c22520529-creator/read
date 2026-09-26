@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>📚 讀書網站</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FCFCF7;   /* 作業簿的紙 */
+  --grid:#DDE8F4;    /* 淡藍格線 */
+  --ink:#1F3A5F;     /* 藍色原子筆 */
+  --soft:#6B7F99;
+  --marker:#FFE45C;  /* 螢光筆 */
+  --green:#2FA86B;   /* 答對 */
+  --red:#E5484D;     /* 紅筆訂正 */
+  --hand:"LXGW WenKai TC","Kaiti TC","DFKai-SB",serif;
+  --ui:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  font-family:var(--ui);color:var(--ink);background:var(--paper);
+  background-image:
+    linear-gradient(var(--grid) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px;
+  min-height:100vh;
+}
+#app{max-width:720px;margin:0 auto;padding:20px 16px 80px}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+
+/* 螢光筆標題 */
+.hl{
+  font-family:var(--hand);font-weight:700;
+  background:linear-gradient(transparent 55%,var(--marker) 55%,var(--marker) 92%,transparent 92%);
+  padding:0 4px;
+}
+.top{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+.top h1{flex:1;margin:0;font-size:24px;line-height:1.3}
+.soft{color:var(--soft);font-size:14px}
+
+.btn{
+  border:2px solid var(--ink);background:var(--ink);color:#fff;border-radius:10px;
+  padding:10px 16px;font-weight:700;cursor:pointer;box-shadow:3px 3px 0 var(--ink);
+  transition:transform .06s, box-shadow .06s;
+}
+.btn:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--ink)}
+.btn.line{background:#fff;color:var(--ink)}
+.btn.sm{padding:6px 12px;font-size:14px;box-shadow:2px 2px 0 var(--ink)}
+.btn:disabled{opacity:.35;cursor:default;transform:none}
+
+.sheet{background:#fff;border:2px solid var(--ink);border-radius:6px;padding:18px;margin-bottom:18px}
+.hello{font-family:var(--hand);font-size:20px;margin:0 0 18px}
+
+/* 科目：像書架上的課本書背 */
+.shelf{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+.book-spine{
+  position:relative;border:2px solid var(--ink);border-radius:4px 10px 10px 4px;background:var(--c);
+  padding:22px 14px 18px 26px;text-align:left;cursor:pointer;box-shadow:4px 4px 0 var(--ink);
+  transition:transform .08s, box-shadow .08s;
+}
+.book-spine::before{content:"";position:absolute;left:8px;top:0;bottom:0;border-left:2px dashed rgba(31,58,95,.35)}
+.book-spine:active{transform:translate(4px,4px);box-shadow:0 0 0 var(--ink)}
+.book-spine .emo{font-size:30px;display:block}
+.book-spine b{font-family:var(--hand);font-size:24px}
+
+/* 大按鈕清單 */
+.list{display:grid;gap:12px}
+.big{
+  display:flex;align-items:center;gap:14px;text-align:left;width:100%;cursor:pointer;
+  background:#fff;border:2px solid var(--ink);border-radius:10px;padding:14px 16px;box-shadow:3px 3px 0 var(--ink);
+}
+.big:active{transform:translate(3px,3px);box-shadow:none}
+.big:disabled{opacity:.4;cursor:default;transform:none}
+.big .emo{font-size:30px}
+.big b{font-family:var(--hand);font-size:21px;display:block}
+.big small{color:var(--soft)}
+
+/* 課本頁：橫線筆記紙 */
+.page-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.tag{background:var(--marker);border:2px solid var(--ink);border-radius:999px;padding:2px 10px;font-weight:700;font-size:14px;white-space:nowrap}
+.page{
+  font-family:var(--hand);font-size:19px;line-height:36px;white-space:pre-wrap;min-height:216px;
+  background-image:linear-gradient(transparent 35px,var(--grid) 35px);background-size:100% 36px;
+  padding:0 4px;word-break:break-word;
+}
+.nav{display:flex;justify-content:space-between;margin-top:14px}
+
+/* 筆記 */
+.note-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+textarea,input,select{
+  width:100%;font:inherit;color:var(--ink);border:2px solid var(--ink);border-radius:8px;padding:10px;background:#fff;
+}
+#noteBox{
+  min-height:180px;resize:vertical;font-family:var(--hand);font-size:18px;line-height:32px;
+  background-image:linear-gradient(transparent 31px,var(--grid) 31px);background-size:100% 32px;background-attachment:local;
+}
+
+/* 章節 */
+.chapters{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:12px}
+
+/* 小考 */
+.bar{height:10px;border:2px solid var(--ink);border-radius:99px;overflow:hidden;margin-bottom:10px}
+.bar div{height:100%;background:var(--marker);transition:width .3s}
+.qtext{font-family:var(--hand);font-size:22px;margin:8px 0 14px;line-height:1.5}
+.opts{display:grid;gap:10px;margin-bottom:14px}
+.opt{
+  display:flex;gap:10px;align-items:center;text-align:left;cursor:pointer;background:#fff;
+  border:2px solid var(--ink);border-radius:10px;padding:12px;font-size:17px;
+}
+.opt:disabled{cursor:default}
+.abc{width:28px;height:28px;flex:none;display:grid;place-items:center;border:2px solid var(--ink);border-radius:50%;font-weight:700}
+.opt.right{background:#E3F6EC;border-color:var(--green)}
+.opt.right .abc{background:var(--green);border-color:var(--green);color:#fff}
+.opt.wrong{background:#FDECEC;border-color:var(--red)}
+.opt.wrong .abc{background:var(--red);border-color:var(--red);color:#fff}
+.fb{font-family:var(--hand);font-size:20px;margin-bottom:12px}
+.fb.good{color:var(--green)} .fb.bad{color:var(--red)}
+.result{text-align:center}
+.result .big-emo{font-size:64px}
+.result .score{font-family:var(--hand);font-size:40px;margin:6px 0 16px}
+.row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+
+/* 出題頁 */
+.form{display:grid;gap:10px}
+.form h3,.admin h3{margin:0 0 4px;font-family:var(--hand);font-size:21px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.item{display:flex;gap:10px;align-items:center;border-top:1px dashed var(--grid);padding:8px 0}
+.item span:not(.tag){flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.del{border:none;background:none;cursor:pointer;font-size:18px}
+
+.center{text-align:center;padding:60px 0}
+.loading{font-family:var(--hand);font-size:22px}
+.empty{font-family:var(--hand);font-size:19px;text-align:center;padding:20px 0}
+#toast{
+  position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(120px);
+  background:var(--ink);color:#fff;padding:12px 18px;border-radius:10px;font-weight:700;transition:transform .25s;z-index:9;max-width:90vw;
+}
+#toast.show{transform:translateX(-50%) translateY(0)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (max-width:480px){.two{grid-template-columns:1fr}.top h1{font-size:21px}}
+</style>
+</head>
+<body>
+<div id="app"><div class="center loading">🐹 準備中…</div></div>
+<div id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, deleteDoc, query, where, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+/* ============ 🔧 若若要填的地方 ============ */
+const firebaseConfig = {
+  apiKey: "AIzaSyAfs9H8BL5Vd1xZqGzZB7jQ_5LjDtVhR1I",
+  authDomain: "read-ed109.firebaseapp.com",
+  projectId: "read-ed109",
+  storageBucket: "read-ed109.firebasestorage.app",
+  messagingSenderId: "354853885360",
+  appId: "1:354853885360:web:9bb4d0657bcb4cff68f275",
+  measurementId: "G-3MPHW50GB0"
+};
+const ADMIN_EMAIL = "c22520529@gmail.com";   // 👑 只有這個信箱能出題
+/* ========================================== */
+
+const SUBJECTS = [
+  { id:"chinese",   name:"國文", emoji:"📜", color:"#FFD6D6" },
+  { id:"english",   name:"英文", emoji:"🔤", color:"#D6E9FF" },
+  { id:"math",      name:"數學", emoji:"🔢", color:"#FFF1B8" },
+  { id:"science",   name:"自然", emoji:"🔬", color:"#D4F5E2" },
+  { id:"history",   name:"歷史", emoji:"🏛️", color:"#EADCF8" },
+  { id:"geography", name:"地理", emoji:"🗺️", color:"#D9F3F5" },
+  { id:"civics",    name:"公民", emoji:"⚖️", color:"#FFE3C7" },
+];
+
+const $app = document.getElementById("app");
+const NOT_SET = firebaseConfig.apiKey.startsWith("請");
+let auth, db;
+
+const S = {
+  user:null, subject:null, pages:[], questions:[], wrong:new Set(),
+  progress:{}, pageIdx:0, bookMode:"review", quizMode:null, quiz:null,
+  adminSubject:"chinese", lastCh:""
+};
+
+/* ---------- 小工具 ---------- */
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const isAdmin = () => !!S.user && S.user.email === ADMIN_EMAIL;
+const val = id => document.getElementById(id).value.trim();
+function cmpCh(a, b){
+  const pa = String(a).split("-").map(Number), pb = String(b).split("-").map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++){
+    const x = pa[i] ?? 0, y = pb[i] ?? 0;
+    if (isNaN(x) || isNaN(y)) return String(a).localeCompare(String(b));
+    if (x !== y) return x - y;
+  }
+  return 0;
+}
+const byChOrder = (a, b) => cmpCh(a.chapter, b.chapter) || (a.order || 0) - (b.order || 0);
+let toastTimer;
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
+}
+function fail(e){ console.error(e); toast("出了點問題：" + (e?.code || e?.message || "請再試一次")); }
+const loading = () => { $app.innerHTML = `<div class="center loading">🐹 載入中…</div>`; };
+const top = (title, back) => `<div class="top">${back ? `<button class="btn line sm" data-act="${back}" aria-label="回上一頁">⬅</button>` : ""}<h1><span class="hl">${title}</span></h1></div>`;
+
+/* ---------- 讀取一個科目的東西 ---------- */
+async function loadSubject(id){
+  S.subject = SUBJECTS.find(s => s.id === id);
+  const [p, q, w] = await Promise.all([
+    getDocs(query(collection(db, "pages"), where("subject", "==", id))),
+    getDocs(query(collection(db, "questions"), where("subject", "==", id))),
+    getDocs(query(collection(db, "users", S.user.uid, "wrong"), where("subject", "==", id))),
+  ]);
+  S.pages = p.docs.map(d => ({ id:d.id, ...d.data() })).sort(byChOrder);
+  S.questions = q.docs.map(d => ({ id:d.id, ...d.data() })).sort(byChOrder);
+  S.wrong = new Set(w.docs.map(d => d.id));
+}
+const wrongList = () => S.questions.filter(q => S.wrong.has(q.id));
+
+/* ---------- 畫面：設定提醒 / 登入 / 首頁 ---------- */
+function renderSetup(){
+  $app.innerHTML = `${top("🔧 還差一步")}
+  <div class="sheet"><p class="hello">打開 index.html，把上面的 firebaseConfig 和 ADMIN_EMAIL 填好，網站就能開始用囉！</p></div>`;
+}
+function renderLogin(){
+  $app.innerHTML = `<div class="center">
+    <h1 style="font-size:34px;margin:0 0 10px"><span class="hl">📚 讀書網站</span></h1>
+    <p class="hello">複習、寫筆記、做小考，進度都會幫你記住 🐹</p>
+    <button class="btn" data-act="login">🟢 用 Google 帳號登入</button>
+  </div>`;
+}
+function renderHome(){
+  S.subject = null;
+  $app.innerHTML = `<div class="top"><h1><span class="hl">📚 讀書網站</span></h1>
+    ${isAdmin() ? `<button class="btn sm" data-act="admin">👑 出題</button>` : ""}
+    <button class="btn line sm" data-act="logout">登出</button></div>
+  <p class="hello">👋 嗨，${esc(S.user.displayName || "同學")}！今天想讀哪一科？</p>
+  <div class="shelf">${SUBJECTS.map(s =>
+    `<button class="book-spine" style="--c:${s.color}" data-act="subject" data-arg="${s.id}"><span class="emo">${s.emoji}</span><b>${s.name}</b></button>`).join("")}
+  </div>`;
+}
+
+/* ---------- 科目選單 ---------- */
+function renderMenu(){
+  const s = S.subject;
+  const at = S.pages.findIndex(p => p.id === S.progress[s.id]);
+  $app.innerHTML = `${top(`${s.emoji} ${s.name}`, "home")}
+  <div class="list">
+    <button class="big" data-act="review"><span class="emo">📖</span><div><b>複習</b><small>${at >= 0 ? `上次看到 P.${at + 1}，接著看` : "一頁一頁看課本"}</small></div></button>
+    <button class="big" data-act="note"><span class="emo">📝</span><div><b>筆記</b><small>上面看課本，下面寫重點</small></div></button>
+    <button class="big" data-act="quizMenu"><span class="emo">✍️</span><div><b>小考</b><small>翻書考、不翻書考、錯題練習</small></div></button>
+  </div>`;
+}
+
+/* ---------- 課本頁（複習 & 筆記共用） ---------- */
+function pageCard(p, i, n, prevAct, nextAct){
+  return `<div class="sheet">
+    <div class="page-head"><span class="tag">📍 ${esc(p.chapter)}</span><span class="soft">P.${i + 1} / ${n}</span></div>
+    <div class="page">${esc(p.content)}</div>
+    <div class="nav">
+      <button class="btn line sm" data-act="${prevAct}" ${i <= 0 ? "disabled" : ""}>⬅ 上一頁</button>
+      <button class="btn line sm" data-act="${nextAct}" ${i >= n - 1 ? "disabled" : ""}>下一頁 ➡</button>
+    </div></div>`;
+}
+function openBook(mode){
+  S.bookMode = mode;
+  const idx = S.pages.findIndex(p => p.id === S.progress[S.subject.id]);
+  S.pageIdx = idx < 0 ? 0 : idx;
+  renderBook();
+}
+function renderBook(){
+  const note = S.bookMode === "note";
+  const title = `${S.subject.emoji} ${S.subject.name}・${note ? "筆記" : "複習"}`;
+  if (!S.pages.length){
+    $app.innerHTML = `${top(title, "menu")}<div class="sheet empty">這一科還沒有課本內容 📭</div>`;
+    return;
+  }
+  const p = S.pages[S.pageIdx];
+  $app.innerHTML = `${top(title, "menu")}${pageCard(p, S.pageIdx, S.pages.length, "prev", "next")}
+  ${note ? `<div class="sheet"><div class="note-head"><b>✏️ 我的筆記</b><span id="saveTip" class="soft"></span></div>
+    <textarea id="noteBox" placeholder="在這裡寫下這一頁的重點…" aria-label="筆記"></textarea></div>` : ""}`;
+  if (note) loadNote(p.id);
+}
+function turn(d){
+  const n = S.pages.length;
+  S.pageIdx = Math.min(n - 1, Math.max(0, S.pageIdx + d));
+  const p = S.pages[S.pageIdx];
+  S.progress[S.subject.id] = p.id;
+  setDoc(doc(db, "users", S.user.uid), { progress:{ [S.subject.id]: p.id } }, { merge:true }).catch(fail);
+  renderBook();
+}
+
+/* ---------- 筆記：自動儲存 ---------- */
+let noteTimer = null, notePending = null;
+async function loadNote(pid){
+  const box = document.getElementById("noteBox"), tip = document.getElementById("saveTip");
+  box.disabled = true; tip.textContent = "讀取中…";
+  try{
+    const snap = await getDoc(doc(db, "users", S.user.uid, "notes", pid));
+    if (document.getElementById("noteBox") !== box) return; // 已經翻到別頁
+    box.value = snap.exists() ? (snap.data().text || "") : "";
+    tip.textContent = "";
+  }catch(e){ tip.textContent = "讀取失敗"; fail(e); }
+  box.disabled = false;
+  box.oninput = () => {
+    tip.textContent = "寫字中…";
+    notePending = { pid, text: box.value, subject: S.subject.id };
+    clearTimeout(noteTimer); noteTimer = setTimeout(flushNote, 800);
+  };
+}
+async function flushNote(){
+  clearTimeout(noteTimer);
+  if (!notePending) return;
+  const { pid, text, subject } = notePending; notePending = null;
+  try{
+    await setDoc(doc(db, "users", S.user.uid, "notes", pid), { text, subject, updatedAt: serverTimestamp() });
+    const tip = document.getElementById("saveTip"); if (tip) tip.textContent = "已儲存 ✅";
+  }catch(e){ fail(e); }
+}
+
+/* ---------- 小考 ---------- */
+function renderQuizMenu(){
+  const has = S.questions.length > 0, wn = wrongList().length;
+  $app.innerHTML = `${top(`${S.subject.emoji} ${S.subject.name}・小考`, "menu")}
+  ${has ? "" : `<div class="sheet empty">這一科還沒有題目 🐣</div>`}
+  <div class="list">
+    <button class="big" data-act="pickMode" data-arg="open" ${has ? "" : "disabled"}><span class="emo">📖</span><div><b>翻書考</b><small>上面看課本，下面作答</small></div></button>
+    <button class="big" data-act="pickMode" data-arg="closed" ${has ? "" : "disabled"}><span class="emo">🙈</span><div><b>不翻書考</b><small>只看題目，挑戰自己</small></div></button>
+    <button class="big" data-act="pickMode" data-arg="wrong" ${wn ? "" : "disabled"}><span class="emo">🔁</span><div><b>錯題練習</b><small>${wn ? `還有 ${wn} 題要練` : "目前沒有錯題 🎉"}</small></div></button>
+  </div>`;
+}
+function renderChapters(){
+  const chs = [...new Set(S.questions.map(q => q.chapter))].sort(cmpCh);
+  const name = S.quizMode === "open" ? "翻書考" : "不翻書考";
+  $app.innerHTML = `${top(`${name}・選章節`, "quizMenu")}
+  <div class="chapters">${chs.map(c =>
+    `<button class="big" data-act="chapter" data-arg="${esc(c)}"><div><b>${esc(c)}</b><small>${S.questions.filter(q => q.chapter === c).length} 題</small></div></button>`).join("")}
+  </div>`;
+}
+function startQuiz(mode, ch){
+  const list = mode === "wrong" ? wrongList() : S.questions.filter(q => q.chapter === ch);
+  if (!list.length){ toast("沒有題目可以考喔"); return renderQuizMenu(); }
+  S.quiz = { mode, chapter: ch ?? null, list, i:0, score:0, picked:null,
+             bookPages: S.pages.filter(p => p.chapter === ch), bookIdx:0 };
+  renderQuiz();
+}
+function renderQuiz(){
+  const Q = S.quiz, q = Q.list[Q.i], n = Q.list.length;
+  const title = { open:"翻書考", closed:"不翻書考", wrong:"錯題練習" }[Q.mode] + (Q.chapter ? `・${esc(Q.chapter)}` : "");
+  let book = "";
+  if (Q.mode === "open"){
+    book = Q.bookPages.length ? pageCard(Q.bookPages[Q.bookIdx], Q.bookIdx, Q.bookPages.length, "qPrev", "qNext")
+                              : `<div class="sheet empty">這個章節還沒有課本內容 📭</div>`;
+  }
+  const done = Q.picked !== null;
+  const opts = (q.options || []).map((o, i) => {
+    let cls = "";
+    if (done){ if (i === q.answer) cls = "right"; else if (i === Q.picked) cls = "wrong"; }
+    return `<button class="opt ${cls}" data-act="answer" data-arg="${i}" ${done ? "disabled" : ""}><span class="abc">${"ABCD"[i]}</span>${esc(o)}</button>`;
+  }).join("");
+  const fb = !done ? "" : Q.picked === q.answer
+    ? `<div class="fb good">🎉 答對了！</div>`
+    : `<div class="fb bad">💪 正確答案是 ${"ABCD"[q.answer]}，已經放進錯題本了</div>`;
+  $app.innerHTML = `${top(title, "quizMenu")}${book}
+  <div class="sheet">
+    <div class="bar"><div style="width:${(Q.i + (done ? 1 : 0)) / n * 100}%"></div></div>
+    <div class="soft">第 ${Q.i + 1} / ${n} 題${Q.mode === "wrong" ? `・📍 ${esc(q.chapter)}` : ""}</div>
+    <h2 class="qtext">${esc(q.question)}</h2>
+    <div class="opts">${opts}</div>${fb}
+    ${done ? `<button class="btn" data-act="nextQ">${Q.i < n - 1 ? "下一題 ➡" : "看成績 🏆"}</button>` : ""}
+  </div>`;
+}
+function answer(i){
+  const Q = S.quiz; if (Q.picked !== null) return;
+  const q = Q.list[Q.i]; Q.picked = i;
+  const ref = doc(db, "users", S.user.uid, "wrong", q.id);
+  if (i === q.answer){
+    Q.score++;
+    if (Q.mode === "wrong"){ S.wrong.delete(q.id); deleteDoc(ref).catch(fail); }
+  } else {
+    S.wrong.add(q.id);
+    setDoc(ref, { subject: S.subject.id, chapter: q.chapter, at: serverTimestamp() }).catch(fail);
+  }
+  renderQuiz();
+}
+function nextQ(){
+  const Q = S.quiz; Q.i++; Q.picked = null;
+  if (Q.i < Q.list.length) return renderQuiz();
+  const n = Q.list.length, pct = Q.score / n;
+  addDoc(collection(db, "users", S.user.uid, "scores"),
+    { subject:S.subject.id, chapter:Q.chapter, mode:Q.mode, score:Q.score, total:n, at:serverTimestamp() }).catch(fail);
+  $app.innerHTML = `${top("考完了！", "quizMenu")}
+  <div class="sheet result">
+    <div class="big-emo">${pct === 1 ? "🏆" : pct >= 0.6 ? "🎉" : "💪"}</div>
+    <div class="score"><span class="hl">${Q.score} / ${n}</span></div>
+    <p class="hello">${pct === 1 ? "全部答對，太厲害了！" : "錯的題目都收進錯題本了，再練一次吧！"}</p>
+    <div class="row">
+      <button class="btn" data-act="retry">🔄 再考一次</button>
+      <button class="btn line" data-act="quizMenu">回小考選單</button>
+    </div>
+  </div>`;
+}
+function qBook(d){
+  const Q = S.quiz;
+  Q.bookIdx = Math.min(Q.bookPages.length - 1, Math.max(0, Q.bookIdx + d));
+  renderQuiz();
+}
+
+/* ---------- 👑 出題頁 ---------- */
+async function openAdmin(sid){
+  if (!isAdmin()) return renderHome();
+  loading();
+  S.adminSubject = sid;
+  await loadSubject(sid);
+  const opt = SUBJECTS.map(s => `<option value="${s.id}" ${s.id === sid ? "selected" : ""}>${s.emoji} ${s.name}</option>`).join("");
+  const short = t => esc(String(t).replace(/\s+/g, " ").slice(0, 40));
+  $app.innerHTML = `${top("👑 出題頁", "home")}
+  <div class="sheet form">
+    <label for="admSubj"><b>要編輯的科目</b></label>
+    <select id="admSubj">${opt}</select>
+    <button class="btn line sm" data-act="seed">🧪 放入範例資料（測試用）</button>
+  </div>
+  <div class="sheet form">
+    <h3>📖 新增課本頁</h3>
+    <input id="pCh" placeholder="章節，例如 1-1" value="${esc(S.lastCh)}">
+    <textarea id="pContent" rows="6" placeholder="這一頁的課本內容"></textarea>
+    <button class="btn" data-act="addPage">➕ 新增課本頁</button>
+  </div>
+  <div class="sheet form">
+    <h3>✍️ 新增題目</h3>
+    <input id="qCh" placeholder="章節，例如 1-1" value="${esc(S.lastCh)}">
+    <textarea id="qText" rows="3" placeholder="題目"></textarea>
+    <div class="two">${"ABCD".split("").map(L => `<input id="q${L}" placeholder="選項 ${L}">`).join("")}</div>
+    <select id="qAns">${"ABCD".split("").map((L, i) => `<option value="${i}">正確答案是 ${L}</option>`).join("")}</select>
+    <button class="btn" data-act="addQuestion">➕ 新增題目</button>
+  </div>
+  <div class="sheet admin"><h3>📚 課本頁（${S.pages.length}）</h3>
+    ${S.pages.map(p => `<div class="item"><span class="tag">${esc(p.chapter)}</span><span>${short(p.content)}</span><button class="del" data-act="delPage" data-arg="${p.id}" aria-label="刪除">🗑️</button></div>`).join("") || `<p class="soft">還沒有課本頁</p>`}
+  </div>
+  <div class="sheet admin"><h3>📝 題目（${S.questions.length}）</h3>
+    ${S.questions.map(q => `<div class="item"><span class="tag">${esc(q.chapter)}</span><span>${short(q.question)}</span><button class="del" data-act="delQ" data-arg="${q.id}" aria-label="刪除">🗑️</button></div>`).join("") || `<p class="soft">還沒有題目</p>`}
+  </div>`;
+}
+async function addPage(){
+  const chapter = val("pCh"), content = document.getElementById("pContent").value.trim();
+  if (!chapter || !content) return toast("章節和內容都要填喔");
+  S.lastCh = chapter;
+  await addDoc(collection(db, "pages"), { subject:S.adminSubject, chapter, content, order:Date.now() });
+  toast("課本頁新增好了 🎉"); await openAdmin(S.adminSubject);
+}
+async function addQuestion(){
+  const chapter = val("qCh"), question = val("qText");
+  const options = ["qA", "qB", "qC", "qD"].map(val);
+  if (!chapter || !question || options.some(o => !o)) return toast("章節、題目和 4 個選項都要填喔");
+  S.lastCh = chapter;
+  await addDoc(collection(db, "questions"),
+    { subject:S.adminSubject, chapter, question, options, answer:Number(val("qAns")), order:Date.now() });
+  toast("題目新增好了 🎉"); await openAdmin(S.adminSubject);
+}
+async function removeDoc(col, id){
+  if (!confirm("確定要刪掉嗎？")) return;
+  await deleteDoc(doc(db, col, id));
+  toast("刪掉了 🗑️"); await openAdmin(S.adminSubject);
+}
+async function seed(){
+  const s = SUBJECTS.find(x => x.id === S.adminSubject);
+  if (!confirm(`要在「${s.name}」放入範例課本和題目嗎？`)) return;
+  const b = writeBatch(db), t = Date.now();
+  [["1-1", 1], ["1-1", 2], ["1-2", 1], ["2-1", 1]].forEach(([ch, n], i) =>
+    b.set(doc(collection(db, "pages")), { subject:s.id, chapter:ch, order:t + i,
+      content:`這是「${s.name}」${ch} 的範例第 ${n} 頁 📖\n\n之後這裡會換成真正的課本內容。\n可以按下面的按鈕翻頁看看！` }));
+  [
+    ["1-1", "範例題：1 + 1 等於多少？", ["1", "2", "3", "4"], 1],
+    ["1-1", "範例題：哪一個是水果？", ["蘋果", "鉛筆", "椅子", "書包"], 0],
+    ["1-2", "範例題：一個星期有幾天？", ["5 天", "6 天", "7 天", "8 天"], 2],
+    ["2-1", "範例題：台灣最高的山是哪一座？", ["雪山", "玉山", "合歡山", "阿里山"], 1],
+  ].forEach(([ch, question, options, answer], i) =>
+    b.set(doc(collection(db, "questions")), { subject:s.id, chapter:ch, question, options, answer, order:t + i }));
+  await b.commit();
+  toast("範例資料放好了 🧪"); await openAdmin(s.id);
+}
+
+/* ---------- 按鈕總指揮 ---------- */
+const A = {
+  login: () => signInWithPopup(auth, new GoogleAuthProvider()),
+  logout: () => signOut(auth),
+  home: () => renderHome(),
+  subject: async id => { loading(); await loadSubject(id); renderMenu(); },
+  menu: () => renderMenu(),
+  review: () => openBook("review"),
+  note: () => openBook("note"),
+  prev: () => turn(-1),
+  next: () => turn(1),
+  quizMenu: () => renderQuizMenu(),
+  pickMode: m => { S.quizMode = m; m === "wrong" ? startQuiz("wrong") : renderChapters(); },
+  chapter: ch => startQuiz(S.quizMode, ch),
+  answer: i => answer(Number(i)),
+  nextQ: () => nextQ(),
+  qPrev: () => qBook(-1),
+  qNext: () => qBook(1),
+  retry: () => startQuiz(S.quiz.mode, S.quiz.chapter),
+  admin: () => openAdmin(S.adminSubject),
+  addPage, addQuestion, seed,
+  delPage: id => removeDoc("pages", id),
+  delQ: id => removeDoc("questions", id),
+};
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-act]");
+  if (!el || el.disabled) return;
+  const fn = A[el.dataset.act]; if (!fn) return;
+  if (notePending) flushNote();
+  Promise.resolve().then(() => fn(el.dataset.arg)).catch(err => {
+    fail(err);
+    if (S.user && !document.querySelector(".top")) renderHome();
+  });
+});
+document.addEventListener("change", e => {
+  if (e.target.id === "admSubj") openAdmin(e.target.value).catch(fail);
+});
+window.addEventListener("beforeunload", () => { if (notePending) flushNote(); });
+
+/* ---------- 開始！ ---------- */
+if (NOT_SET){
+  renderSetup();
+} else {
+  const app = initializeApp(firebaseConfig);
+  auth = getAuth(app); db = getFirestore(app);
+  onAuthStateChanged(auth, async user => {
+    S.user = user;
+    if (!user) return renderLogin();
+    loading();
+    try{
+      const snap = await getDoc(doc(db, "users", user.uid));
+      S.progress = snap.exists() ? (snap.data().progress || {}) : {};
+    }catch(e){ S.progress = {}; fail(e); }
+    renderHome();
+  });
+}
+</script>
+</body>
+</html>
